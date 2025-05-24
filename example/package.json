@@ -1,0 +1,13 @@
+{
+  "name": "example",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "ai": "^4.3.16"
+  }
+}
