@@ -42,7 +42,7 @@ export class JinaEmbeddingModel<T> implements EmbeddingModelV1<T> {
   }
 
   get maxEmbeddingsPerCall(): number {
-    return 128;
+    return 2048;
   }
 
   get supportsParallelCalls(): boolean {

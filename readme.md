@@ -120,6 +120,10 @@ const embeddingModel = jina.textEmbeddingModel(
 );
 ```
 
+## Max Embeddings Per Call
+
+The Jina AI Provider supports up to 2048 embeddings per call.
+
 ## Jina embedding models:
 
 | Model              | Context Length (tokens) | Embedding Dimension | Modalities    |
@@ -132,14 +136,21 @@ const embeddingModel = jina.textEmbeddingModel(
 
 ### Text Embeddings
 
-- Plain strings: `"Your text here"`
-- Array of strings: `["text1", "text2"]`
+- Array of strings:
+  - `const strings = ["text1", "text2"]`
 
 ### Multimodal Embeddings
 
-- Text objects: `{ text: "Your text here" }`
-- Image objects: `{ image: "https://example.com/image.jpg" }`
-- Mixed arrays: `[{ text: "object text" }, { image: "image-url" }]`
+- Text objects:
+  - `const text = [{ text: "Your text here" }]`
+- Image objects:
+  - `const image = [{ image: "https://example.com/image.jpg" }]`
+  - `const image = [{ image: "base64-encoded-image" }]`
+- Mixed arrays:
+  - `const mixed = [{ text: "object text" }, { image: "image-url" }, {image: "base64-encoded-image"}]`
+
+> [!TIP]
+> You can pass base64 encoded image to `image` property.
 
 ## Authors
 
