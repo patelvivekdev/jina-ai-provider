@@ -1,6 +1,7 @@
-import type { EmbeddingModelV1Embedding } from '@ai-sdk/provider';
+import type { EmbeddingModelV2Embedding } from '@ai-sdk/provider';
 import { createTestServer } from '@ai-sdk/provider-utils/test';
 import { createJina } from './jina-provider';
+import type { jinaEmbeddingOptions } from './jina-embedding-options';
 
 const dummyEmbeddings = [
   [0.1, 0.2, 0.3],
@@ -32,7 +33,7 @@ describe('JinaMultiModalEmbeddingModel', () => {
     },
     headers,
   }: {
-    embeddings?: EmbeddingModelV1Embedding[];
+    embeddings?: EmbeddingModelV2Embedding[];
     usage?: { prompt_tokens: number; total_tokens: number };
     headers?: Record<string, string>;
   } = {}) {
@@ -75,7 +76,7 @@ describe('JinaMultiModalEmbeddingModel', () => {
 
     await model.doEmbed({ values });
 
-    const requestBody = await server.calls[0]?.requestBody;
+    const requestBody = await server.calls[0]?.requestBodyJson;
 
     expect(requestBody).toStrictEqual({
       input: [
@@ -129,17 +130,22 @@ describe('JinaMultiModalEmbeddingModel', () => {
       apiKey: 'test-api-key',
     });
 
-    const modelWithSettings = jina.multiModalEmbeddingModel('jina-clip-v2', {
-      inputType: 'retrieval.passage',
-      outputDimension: 768,
-      embeddingType: 'binary',
-    });
+    const modelWithSettings = jina.multiModalEmbeddingModel('jina-clip-v2');
 
     const values = [{ text: 'test' }];
 
-    await modelWithSettings.doEmbed({ values });
+    await modelWithSettings.doEmbed({
+      values,
+      providerOptions: {
+        jina: {
+          inputType: 'retrieval.passage',
+          outputDimension: 768,
+          embeddingType: 'binary',
+        } as jinaEmbeddingOptions,
+      },
+    });
 
-    const requestBody = await server.calls[0]?.requestBody;
+    const requestBody = await server.calls[0]?.requestBodyJson;
 
     expect(requestBody).toStrictEqual({
       input: [{ text: 'test' }],

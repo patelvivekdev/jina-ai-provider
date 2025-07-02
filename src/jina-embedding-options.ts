@@ -1,3 +1,5 @@
+import { z } from 'zod/v4';
+
 export type JinaEmbeddingModelId =
   // Text Embedding Models
   | 'jina-embeddings-v3'
@@ -9,7 +11,7 @@ export type JinaEmbeddingModelId =
   | 'jina-clip-v1'
   | (string & {});
 
-export interface JinaEmbeddingSettings {
+export const jinaEmbeddingOptions = z.object({
   /**
    * The input type for the embeddings.
    *
@@ -25,13 +27,15 @@ export interface JinaEmbeddingSettings {
    * - `separation`: Specifies that the embedding is used for clustering.
    */
 
-  inputType?:
-    | 'text-matching'
-    | 'retrieval.query'
-    | 'retrieval.passage'
-    | 'separation'
-    | 'classification'
-    | undefined;
+  inputType: z
+    .enum([
+      'text-matching',
+      'retrieval.query',
+      'retrieval.passage',
+      'separation',
+      'classification',
+    ])
+    .optional(),
 
   /**
    * The number of dimensions for the resulting output embeddings.
@@ -51,7 +55,7 @@ export interface JinaEmbeddingSettings {
    *
    * @see https://jina.ai/api-dashboard/embedding
    */
-  outputDimension?: number;
+  outputDimension: z.number().optional(),
 
   /**
    * Late chunking
@@ -64,7 +68,7 @@ export interface JinaEmbeddingSettings {
    *
    * This is only supported in text embedding models.
    */
-  lateChunking?: boolean;
+  lateChunking: z.boolean().optional(),
 
   /**
    * The data type for the resulting output embeddings.
@@ -76,14 +80,14 @@ export interface JinaEmbeddingSettings {
    * - `ubinary`: 8-bit unsigned binary values
    * - `base64`: Base64 encoded strings
    */
-  embeddingType?: 'float' | 'binary' | 'ubinary' | 'base64';
+  embeddingType: z.enum(['float', 'binary', 'ubinary', 'base64']).optional(),
 
   /**
    * Whether to normalize the resulting output embeddings.
    * Scales the embedding so its Euclidean (L2) norm becomes 1, preserving direction. Useful when downstream involves dot-product, classification, visualization.
    * Defaults to true.
    */
-  normalized?: boolean;
+  normalized: z.boolean().optional(),
 
   /**
    * Truncate at Maximum Context Length which is 8k tokens
@@ -92,5 +96,7 @@ export interface JinaEmbeddingSettings {
    *
    * Defaults to false.
    */
-  truncate?: boolean;
-}
+  truncate: z.boolean().optional(),
+});
+
+export type JinaEmbeddingOptions = z.infer<typeof jinaEmbeddingOptions>;

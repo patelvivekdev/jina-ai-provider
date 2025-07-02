@@ -1,7 +1,8 @@
 import type {
-  EmbeddingModelV1,
-  LanguageModelV1,
-  ProviderV1,
+  EmbeddingModelV2,
+  ImageModelV2,
+  LanguageModelV2,
+  ProviderV2,
 } from '@ai-sdk/provider';
 import {
   type FetchFunction,
@@ -13,22 +14,16 @@ import {
   type MultimodalEmbeddingInput,
   type TextEmbeddingInput,
 } from './jina-embedding-model';
-import type {
-  JinaEmbeddingModelId,
-  JinaEmbeddingSettings,
-} from './jina-embedding-settings';
+import type { JinaEmbeddingModelId } from './jina-embedding-options';
 
-export interface JinaProvider extends ProviderV1 {
+export interface JinaProvider extends ProviderV2 {
   /**
    * Create a text embedding model for string inputs only.
    * This ensures type safety by only allowing string arrays.
    * @param modelId - The Jina model ID
    * @param settings - Optional model settings
    */
-  textEmbeddingModel(
-    modelId: JinaEmbeddingModelId,
-    settings?: JinaEmbeddingSettings,
-  ): EmbeddingModelV1<string>;
+  textEmbeddingModel(modelId: JinaEmbeddingModelId): EmbeddingModelV2<string>;
 
   /**
    * Create a multimodal embedding model for MultimodalEmbeddingInput only.
@@ -38,8 +33,7 @@ export interface JinaProvider extends ProviderV1 {
    */
   multiModalEmbeddingModel(
     modelId: JinaEmbeddingModelId,
-    settings?: JinaEmbeddingSettings,
-  ): EmbeddingModelV1<MultimodalEmbeddingInput>;
+  ): EmbeddingModelV2<MultimodalEmbeddingInput>;
 }
 
 export interface JinaProviderSettings {
@@ -80,56 +74,44 @@ export function createJina(options: JinaProviderSettings = {}): JinaProvider {
     ...options.headers,
   });
 
-  const createTextEmbeddingModel = (
-    modelId: JinaEmbeddingModelId,
-    settings: JinaEmbeddingSettings = {},
-  ) =>
-    new JinaEmbeddingModel<TextEmbeddingInput>(modelId, settings, {
+  const createTextEmbeddingModel = (modelId: JinaEmbeddingModelId) =>
+    new JinaEmbeddingModel<TextEmbeddingInput>(modelId, {
       provider: 'jina.text.embedding',
       baseURL,
       headers: getHeaders,
       fetch: options.fetch,
     });
 
-  const createMultiModalEmbeddingModel = (
-    modelId: JinaEmbeddingModelId,
-    settings: JinaEmbeddingSettings = {},
-  ) =>
-    new JinaEmbeddingModel<MultimodalEmbeddingInput>(modelId, settings, {
+  const createMultiModalEmbeddingModel = (modelId: JinaEmbeddingModelId) =>
+    new JinaEmbeddingModel<MultimodalEmbeddingInput>(modelId, {
       provider: 'jina.multimodal.embedding',
       baseURL,
       headers: getHeaders,
       fetch: options.fetch,
     });
 
-  const provider = function (
-    modelId: JinaEmbeddingModelId,
-    settings?: JinaEmbeddingSettings,
-  ) {
+  const provider = function (modelId: JinaEmbeddingModelId) {
     if (new.target) {
       throw new Error(
         'The Jina model function cannot be called with the new keyword.',
       );
     }
 
-    return createTextEmbeddingModel(modelId, settings);
+    return createTextEmbeddingModel(modelId);
   };
 
   provider.textEmbeddingModel = createTextEmbeddingModel;
   provider.multiModalEmbeddingModel = createMultiModalEmbeddingModel;
 
-  provider.languageModel = (modelId: string): LanguageModelV1 => {
-    throw new Error(
-      `Language model '${modelId}' is not supported by Jina provider.`,
-    );
+  provider.chat = provider.languageModel = (): LanguageModelV2 => {
+    throw new Error('languageModel method is not implemented.');
+  };
+  provider.imageModel = (): ImageModelV2 => {
+    throw new Error('imageModel method is not implemented.');
   };
   return provider as JinaProvider;
 }
 
 export const jina = createJina();
 
-export type {
-  MultimodalEmbeddingInput,
-  JinaEmbeddingModelId,
-  JinaEmbeddingSettings,
-};
+export type { MultimodalEmbeddingInput, JinaEmbeddingModelId };
