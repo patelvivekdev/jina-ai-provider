@@ -1,5 +1,16 @@
 # jina-ai-provider
 
+## 1.0.0
+
+### Major Changes
+
+- 309952a: - update to @ai-sdk/provider and @ai-sdk/provider-utils beta
+  - change to zod v4 internally
+
+### Patch Changes
+
+- 309952a: export JinaEmbeddingOptions
+
 ## 1.0.0-beta.1
 
 ### Patch Changes

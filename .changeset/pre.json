@@ -1,8 +1,0 @@
-{
-  "mode": "pre",
-  "tag": "beta",
-  "initialVersions": {
-    "jina-ai-provider": "0.0.2"
-  },
-  "changesets": ["afraid-toys-win", "loose-moose-sink"]
-}
