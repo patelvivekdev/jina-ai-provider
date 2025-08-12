@@ -1,19 +1,20 @@
 import {
-  type EmbeddingModelV1,
+  type EmbeddingModelV2,
   TooManyEmbeddingValuesForCallError,
 } from '@ai-sdk/provider';
 import {
   combineHeaders,
   createJsonResponseHandler,
   type FetchFunction,
+  parseProviderOptions,
   postJsonToApi,
 } from '@ai-sdk/provider-utils';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 
-import type {
-  JinaEmbeddingModelId,
-  JinaEmbeddingSettings,
-} from '@/jina-embedding-settings';
+import {
+  jinaEmbeddingOptions,
+  type JinaEmbeddingModelId,
+} from '@/jina-embedding-options';
 import { voyageFailedResponseHandler } from '@/jina-error';
 
 type JinaEmbeddingConfig = {
@@ -30,12 +31,11 @@ export type MultimodalEmbeddingInput = {
   image?: string;
 };
 
-export class JinaEmbeddingModel<T> implements EmbeddingModelV1<T> {
-  readonly specificationVersion = 'v1' as const;
+export class JinaEmbeddingModel<T> implements EmbeddingModelV2<T> {
+  readonly specificationVersion = 'v2' as const;
   readonly modelId: JinaEmbeddingModelId;
 
   private readonly config: JinaEmbeddingConfig;
-  private readonly settings: JinaEmbeddingSettings;
 
   get provider(): string {
     return this.config.provider;
@@ -49,23 +49,25 @@ export class JinaEmbeddingModel<T> implements EmbeddingModelV1<T> {
     return false;
   }
 
-  constructor(
-    modelId: JinaEmbeddingModelId,
-    settings: JinaEmbeddingSettings,
-    config: JinaEmbeddingConfig,
-  ) {
+  constructor(modelId: JinaEmbeddingModelId, config: JinaEmbeddingConfig) {
     this.modelId = modelId;
-    this.settings = settings;
     this.config = config;
   }
 
   async doEmbed({
+    abortSignal,
     values,
     headers,
-    abortSignal,
-  }: Parameters<EmbeddingModelV1<T>['doEmbed']>[0]): Promise<
-    Awaited<ReturnType<EmbeddingModelV1<T>['doEmbed']>>
+    providerOptions,
+  }: Parameters<EmbeddingModelV2<T>['doEmbed']>[0]): Promise<
+    Awaited<ReturnType<EmbeddingModelV2<T>['doEmbed']>>
   > {
+    const embeddingOptions = await parseProviderOptions({
+      provider: 'jina',
+      providerOptions,
+      schema: jinaEmbeddingOptions,
+    });
+
     if (values.length > this.maxEmbeddingsPerCall) {
       throw new TooManyEmbeddingValuesForCallError({
         maxEmbeddingsPerCall: this.maxEmbeddingsPerCall,
@@ -80,12 +82,12 @@ export class JinaEmbeddingModel<T> implements EmbeddingModelV1<T> {
       body: {
         model: this.modelId,
         input: values,
-        task: this.settings.inputType,
-        embedding_type: this.settings.embeddingType,
-        dimensions: this.settings.outputDimension,
-        normalized: this.settings.normalized ?? true,
-        late_chunking: this.settings.lateChunking,
-        truncate: this.settings.truncate ?? false,
+        task: embeddingOptions?.inputType,
+        embedding_type: embeddingOptions?.embeddingType,
+        dimensions: embeddingOptions?.outputDimension,
+        normalized: embeddingOptions?.normalized ?? true,
+        late_chunking: embeddingOptions?.lateChunking,
+        truncate: embeddingOptions?.truncate ?? false,
       },
       failedResponseHandler: voyageFailedResponseHandler,
       fetch: this.config.fetch,
@@ -101,7 +103,7 @@ export class JinaEmbeddingModel<T> implements EmbeddingModelV1<T> {
       usage: response.usage
         ? { tokens: response.usage.total_tokens }
         : undefined,
-      rawResponse: { headers: responseHeaders },
+      response: { headers: responseHeaders },
     };
   }
 }

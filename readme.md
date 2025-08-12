@@ -39,6 +39,35 @@ Add the following to your `.env` file:
 JINA_API_KEY=your-api-key
 ```
 
+## Provider Instance
+
+You can use the default provider instance or create your own configured instance.
+
+```ts
+import { jina } from 'jina-ai-provider';
+// or
+import { createJina } from 'jina-ai-provider';
+
+const customJina = createJina({
+  // provider-level settings (not part of providerOptions)
+  apiKey: process.env.JINA_API_KEY,
+  // baseURL: 'https://api.jina.ai/v1',
+  // headers: { 'x-my-header': 'value' },
+  // fetch: yourCustomFetch,
+});
+```
+
+You can use the following optional settings to customize the Jina provider instance:
+
+- **baseURL** string
+  - The base URL of the Jina API. Defaults to `https://api.jina.ai/v1`.
+- **apiKey** string
+  - API key sent via the `Authorization` header. Defaults to the `JINA_API_KEY` environment variable.
+- **headers** Record<string, string>
+  - Custom headers to include with every request.
+- **fetch** (input: RequestInfo, init?: RequestInit) => Promise<Response>
+  - Custom fetch implementation or middleware (for interception, testing, etc.).
+
 ## Usage
 
 ### Text Embeddings
@@ -47,24 +76,33 @@ JINA_API_KEY=your-api-key
 import { jina } from 'jina-ai-provider';
 import { embedMany } from 'ai';
 
-const embeddingModel = jina.textEmbeddingModel('jina-embeddings-v3');
+const textEmbeddingModel = jina.textEmbeddingModel('jina-embeddings-v3');
 
 export const generateEmbeddings = async (
   value: string,
 ): Promise<Array<{ embedding: number[]; content: string }>> => {
-  // Generate chunks from the input value
   const chunks = value.split('\n');
 
-  // Optional: You can also split the input value by comma
-  // const chunks = value.split('.');
-
-  // Or you can use LLM to generate chunks(summarize) from the input value
-
   const { embeddings } = await embedMany({
-    model: embeddingModel,
+    model: textEmbeddingModel,
     values: chunks,
+    providerOptions: {
+      // Jina embedding options for this request
+      jina: {
+        outputDimension: 3,
+        inputType: 'retrieval.passage',
+        embeddingType: 'float',
+        normalized: true,
+        truncate: true,
+        lateChunking: true,
+      },
+    },
   });
-  return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
+
+  return embeddings.map((embedding, index) => ({
+    content: chunks[index]!,
+    embedding,
+  }));
 };
 ```
 
@@ -77,19 +115,24 @@ import { embedMany } from 'ai';
 const multimodalModel = jina.multiModalEmbeddingModel('jina-clip-v2');
 
 export const generateMultimodalEmbeddings = async () => {
-  const values = [
+  const values: MultimodalEmbeddingInput[] = [
     { text: 'A beautiful sunset over the beach' },
     { image: 'https://i.ibb.co/r5w8hG8/beach2.jpg' },
   ];
 
   const { embeddings } = await embedMany<MultimodalEmbeddingInput>({
     model: multimodalModel,
-    values: values,
+    values,
+    providerOptions: {
+      jina: {
+        outputDimension: 6,
+      },
+    },
   });
 
   return embeddings.map((embedding, index) => ({
-    content: values[index],
-    embedding: embedding,
+    content: values[index]!,
+    embedding,
   }));
 };
 ```
@@ -97,28 +140,54 @@ export const generateMultimodalEmbeddings = async () => {
 > [!TIP]
 > Use `MultimodalEmbeddingInput` type to ensure type safety when using multimodal embeddings.
 
-### How to pass additional settings to the model
+### Provider options
 
-The settings object should contain the settings you want to add to the model. You can find the available settings for the model in the Jina API documentation: https://jina.ai/embeddings/
+Pass Jina embedding options via `providerOptions.jina`. See supported fields below.
 
 ```typescript
-import { createJina } from 'jina-ai-provider';
+import { jina } from 'jina-ai-provider';
+import { embedMany } from 'ai';
 
-const jina = createJina({
-  apiKey: process.env.JINA_API_KEY,
-});
+const model = jina.textEmbeddingModel('jina-embeddings-v3');
 
-// Initialize the embedding model with settings
-const embeddingModel = jina.textEmbeddingModel(
-  'jina-embeddings-v3',
-  // adding settings
-  {
-    inputType: 'retrieval.query',
-    outputDimension: 1024,
-    embeddingType: 'float',
+const { embeddings } = await embedMany({
+  model,
+  values: ['one', 'two'],
+  providerOptions: {
+    jina: {
+      inputType: 'retrieval.query',
+      outputDimension: 1024,
+      embeddingType: 'float',
+      normalized: true,
+      truncate: false,
+      lateChunking: false,
+    },
   },
-);
+});
 ```
+
+Supported provider options via `providerOptions.jina`:
+
+- **inputType** `'text-matching' | 'retrieval.query' | 'retrieval.passage' | 'separation' | 'classification'`
+  - Intended downstream application to help the model produce better embeddings. Defaults to `'retrieval.passage'`.
+  - `'retrieval.query'`: input is a search query.
+  - `'retrieval.passage'`: input is a document/passage.
+  - `'text-matching'`: for semantic textual similarity tasks.
+  - `'classification'`: for classification tasks.
+  - `'separation'`: for clustering tasks.
+- **outputDimension** number
+  - Number of dimensions for the output embeddings. See model docs for ranges.
+  - `jina-embeddings-v3`: min 32, max 1024.
+  - `jina-clip-v2`: min 64, max 1024.
+  - `jina-clip-v1`: fixed 768.
+- **embeddingType** `'float' | 'binary' | 'ubinary' | 'base64'`
+  - Data type for the returned embeddings. Defaults to `'float'`.
+- **normalized** boolean
+  - Whether to L2-normalize embeddings. Defaults to `true`.
+- **truncate** boolean
+  - Whether to truncate inputs beyond the model context limit instead of erroring. Defaults to `false`.
+- **lateChunking** boolean
+  - Split long inputs into 1024-token chunks automatically. Defaults to `false`. Only for text embedding models.
 
 ## Max Embeddings Per Call
 

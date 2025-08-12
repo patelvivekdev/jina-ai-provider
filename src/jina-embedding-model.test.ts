@@ -1,6 +1,7 @@
-import type { EmbeddingModelV1Embedding } from '@ai-sdk/provider';
+import type { EmbeddingModelV2Embedding } from '@ai-sdk/provider';
 import { createTestServer } from '@ai-sdk/provider-utils/test';
 import { createJina } from './jina-provider';
+import type { jinaEmbeddingOptions } from './jina-embedding-options';
 
 const dummyEmbeddings = [
   [0.1, 0.2, 0.3, 0.4, 0.5],
@@ -28,7 +29,7 @@ describe('JinaTextEmbeddingModel', () => {
     },
     headers,
   }: {
-    embeddings?: EmbeddingModelV1Embedding[];
+    embeddings?: EmbeddingModelV2Embedding[];
     usage?: { prompt_tokens: number; total_tokens: number };
     headers?: Record<string, string>;
   } = {}) {
@@ -63,9 +64,9 @@ describe('JinaTextEmbeddingModel', () => {
 
     const values = ['sunny day at the beach', 'rainy day in the city'];
 
-    const { rawResponse } = await model.doEmbed({ values });
+    const { response } = await model.doEmbed({ values });
 
-    expect(rawResponse?.headers).toStrictEqual({
+    expect(response?.headers).toStrictEqual({
       'content-length': '233',
       // default headers:
       'content-type': 'application/json',
@@ -105,7 +106,7 @@ describe('JinaTextEmbeddingModel', () => {
     });
   });
 
-  it('should pass the settings', async () => {
+  it('should pass the options', async () => {
     prepareJsonResponse();
 
     const jina = createJina({
@@ -115,15 +116,18 @@ describe('JinaTextEmbeddingModel', () => {
 
     const values = ['sunny day at the beach', 'rainy day in the city'];
 
-    await jina
-      .textEmbeddingModel('jina-embeddings-v3', {
-        inputType: 'retrieval.query',
-        outputDimension: 2048,
-        embeddingType: 'binary',
-      })
-      .doEmbed({ values });
+    await jina.textEmbeddingModel('jina-embeddings-v3').doEmbed({
+      values,
+      providerOptions: {
+        jina: {
+          inputType: 'retrieval.query',
+          outputDimension: 2048,
+          embeddingType: 'binary',
+        } as jinaEmbeddingOptions,
+      },
+    });
 
-    const requestBody = await server.calls[0]?.requestBody;
+    const requestBody = await server.calls[0]?.requestBodyJson;
 
     expect(requestBody).toStrictEqual({
       dimensions: 2048,

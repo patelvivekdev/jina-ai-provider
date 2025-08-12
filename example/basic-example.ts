@@ -2,14 +2,7 @@ import { jina } from '../src/index';
 import { embedMany } from 'ai';
 
 async function main() {
-  const textEmbeddingModel = jina.textEmbeddingModel('jina-embeddings-v3', {
-    outputDimension: 3,
-    inputType: 'retrieval.passage',
-    embeddingType: 'float',
-    normalized: true,
-    truncate: true,
-    lateChunking: true,
-  });
+  const textEmbeddingModel = jina.textEmbeddingModel('jina-embeddings-v3');
 
   const textValues: string[] = [
     'A beautiful sunset over the beach',
@@ -20,6 +13,16 @@ async function main() {
     const textResponse = await embedMany({
       model: textEmbeddingModel,
       values: textValues,
+      providerOptions: {
+        jina: {
+          outputDimension: 3,
+          inputType: 'retrieval.passage',
+          embeddingType: 'float',
+          normalized: true,
+          truncate: true,
+          lateChunking: true,
+        },
+      },
     });
 
     for (const [index, embedding] of textResponse.embeddings.entries()) {

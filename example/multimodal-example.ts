@@ -2,9 +2,7 @@ import { jina, type MultimodalEmbeddingInput } from '../src/index';
 import { embedMany } from 'ai';
 
 async function main() {
-  const embeddingModel = jina.multiModalEmbeddingModel('jina-clip-v2', {
-    outputDimension: 6,
-  });
+  const embeddingModel = jina.multiModalEmbeddingModel('jina-clip-v2');
 
   const multimodalValues = [
     { text: 'A beautiful sunset over the beach' },
@@ -15,6 +13,11 @@ async function main() {
     const response = await embedMany<MultimodalEmbeddingInput>({
       model: embeddingModel,
       values: multimodalValues,
+      providerOptions: {
+        jina: {
+          outputDimension: 6,
+        },
+      },
     });
 
     for (const [index, embedding] of response.embeddings.entries()) {
